@@ -1,74 +1,83 @@
-# SE6014project_fingerprinting
-IoT Device Fingerprinting via Network-Flow Based Fingerprinting and Learning
+# IoT Device Fingerprinting via Network-Flow Based Fingerprinting and Learning
 
-Overview
+## Problem Motivation
 
-This repository contains a reproduction of the methodology described in "IoT Device Identification via Network-Flow Based Fingerprinting and Learning". We extract payload- and flow-based features from network traffic captures (PCAPs) and train machine learning models to accurately identify IoT devices based solely on their communication patterns.
+IoT ecosystems consist of highly diverse devices with varying capabilities and security mechanisms. Traditional cryptographic authentication can be resource-intensive, often exceeding the memory and processing constraints of many IoT devices. Consequently, these methods struggle to provide universal device identification and authentication across heterogeneous networks. Lightweight, behavior-based fingerprinting offers a scalable alternative to prevent unauthorized access and enhance overall network security. 
 
-Features
+## Technical Approach
 
-Entropy Calculation: Compute Shannon entropy of packet payloads to distinguish encrypted vs. plaintext communications.
+This project implements a passive fingerprinting methodology inspired by the referenced paper. Key aspects include:
 
-Flow-Based Features: Extract statistical and temporal features (e.g., packet lengths, inter-arrival times) for each network flow.
+- **Network-Flow Data:** Capturing sequences of packets (PCAP files) without active probing.
+- **Feature Extraction:** Deriving both header- and payload-based features to characterize device behavior.
+- **Behavioral Fingerprints:** Constructing unique binary vectors and statistical summaries that serve as device fingerprints. 
 
-Batch PCAP Processing: Support processing one or multiple PCAP files in a single run.
+## Dataset
 
-Automated Labeling: Associate each feature vector with the correct device label.
+The original dataset comprises multiple PCAP files exceeding 4 GB each, containing comprehensive network flow records of IoT devices. These captures can be inspected using tools like Wireshark for verification and exploratory analysis. citeturn0file0
 
-Model Training: Train and evaluate classifiers (e.g., Random Forest, SVM) on the extracted feature set.
+## Feature Extraction
 
-Installation
+A total of 20 features are extracted per packet:
 
-Clone this repository:
+- **17 Binary Flags:** Indicate presence of specific protocols or header characteristics (e.g., TCP, UDP, DNS).
+- **3 Continuous Metrics:** Include packet length statistics, inter-arrival times, and payload entropy.  
 
-git clone https://github.com/yourusername/iot-fingerprinting.git
-cd iot-fingerprinting
+## Fingerprint Generation
 
-(Optional) Create a virtual environment:
+Post-extraction, feature vectors across all PCAPs are aggregated into a CSV dataset containing over 1 million rows. Due to memory limitations when opening large CSVs, downstream processing must be optimized or filtered before loading. 
 
-python3 -m venv venv
-source venv/bin/activate
+## Data Filtering
 
+To manage resource constraints and focus on meaningful patterns, device entries with fewer than 100 occurrences are removed. This threshold balances the dataset size against the need to capture sufficiently representative behavior samples. 
 
-Usage
+## Model Training
 
-Place your PCAP files in data/pcaps/.
+Using the filtered dataset, a Random Forest classifier is trained to identify device types. While the original study evaluated multiple algorithms (KNN, SVM, Decision Trees), Random Forest yielded the best performance in this reproduction. 
 
-Launch the Jupyter notebook:
+## Results and Observations
 
-jupyter notebook main.ipynb
+- **Initial Run:** Directly using the folder-structured labels led to overly granular classification and ~50% accuracy.
+- **Paper-Aligned Labels:** Consolidating status and behavior labels per the original methodology improved accuracy to ~90%. This is satisfactory for our replication, though the paper reports up to 99.9% accuracy. citeturn0file0
 
-Step through the notebook cells to:
+## Project Structure
 
-Load and preprocess PCAP data
-
-Extract payload and flow features
-
-Generate labeled feature vectors
-
-Train and evaluate classification models
-
-Project Structure
-
-├── data/                  # Folder for input PCAPs and processed datasets
-├── notebooks/
-│   └── main.ipynb         # Primary analysis and implementation notebook
-├── features.py            # Functions for entropy and packet-feature extraction
-├── preprocess.py          # PCAP reader and label maker
-├── train.py               # Model training and evaluation scripts
+```
+├── data/                  # Raw PCAP captures and filtered CSVs
+├── features.py            # Header and payload feature extraction logic
+├── preprocess.py          # Data aggregation and filtering utilities
+├── train.py               # Training and evaluation scripts for Random Forest
+├── notebooks/             # Jupyter analyses and exploratory code
+│   └── main.ipynb         # Step-by-step implementation and results
 ├── requirements.txt       # Python dependencies
 └── README.md              # Project documentation
+```
 
-Results
+## Installation
 
-Model performance (example):
+```
+git clone https://github.com/yourusername/iot-fingerprinting.git
+cd iot-fingerprinting
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-Random Forest: 95% accuracy on device identification task
+## Usage
 
-SVM: 93% accuracy
+1. Place PCAP files in `data/pcaps/`.
 
-Full evaluation metrics and plots are available in the notebook.
+2. Run preprocessing and feature extraction:
 
-References
+   ```
+   python preprocess.py --pcap-dir data/pcaps --output data/features.csv
+   ```
 
-Ibrahim, et al., "IoT Device Identification via Network-Flow Based Fingerprinting and Learning", IEEE Transactions on Information Forensics and Security, 2020.
+3. Train and evaluate the model:
+
+   ```
+   python train.py --data data/features_filtered.csv
+   ```
+
+4. Review results in `notebooks/main.ipynb`.
+
